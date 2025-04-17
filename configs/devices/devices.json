@@ -1,0 +1,20 @@
+{
+  "devices": [
+    {
+      "id": "device1",
+      "name": "变电站1号设备",
+      "protocol": "modbus",
+      "model": "SIEMENS-S7-1200",
+      "connection": {
+        "address": "127.0.0.1",
+        "port": 502,
+        "timeout": 5000,
+        "retries": 3
+      },
+      "parameters": {
+        "slave_id": 1,
+        "byte_order": "big_endian"
+      }
+    }
+  ]
+}

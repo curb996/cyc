@@ -1,0 +1,235 @@
+{
+  "models": [
+    {
+      "modelId": "SIEMENS-S7-1200",
+      "protocol": "modbus",
+      "description": "西门子S7-1200 PLC设备",
+      "points": [
+        {
+          "id": "temp1",
+          "name": "温度传感器1",
+          "address": "40001",
+          "dataType": "float32",
+          "unit": "°C",
+          "scaleFactor": 0.1,
+          "readOnly": true,
+          "description": "设备环境温度",
+          "alarmSettings": {
+            "highLimit": 75.0,
+            "lowLimit": -10.0,
+            "enableAlarm": true
+          },
+          "scanRate": 1000
+        },
+        {
+          "id": "humidity1",
+          "name": "湿度传感器1",
+          "address": "40003",
+          "dataType": "uint16",
+          "unit": "%RH",
+          "scaleFactor": 0.1,
+          "readOnly": true,
+          "description": "设备环境湿度",
+          "alarmSettings": {
+            "highLimit": 95.0,
+            "lowLimit": 5.0,
+            "enableAlarm": true
+          },
+          "scanRate": 1000
+        },
+        {
+          "id": "powerStatus",
+          "name": "电源状态",
+          "address": "10001",
+          "dataType": "bool",
+          "readOnly": true,
+          "description": "设备电源状态",
+          "scanRate": 500
+        },
+        {
+          "id": "controlSwitch",
+          "name": "控制开关",
+          "address": "00001",
+          "dataType": "bool",
+          "readOnly": false,
+          "description": "设备控制开关",
+          "scanRate": 500
+        }
+      ]
+    },
+    {
+      "modelId": "ABB-RTU560",
+      "protocol": "iec104",
+      "description": "ABB RTU560远程终端单元",
+      "points": [
+        {
+          "id": "current1",
+          "name": "A相电流",
+          "address": "45056",
+          "dataType": "float32",
+          "unit": "A",
+          "readOnly": true,
+          "description": "A相电流值",
+          "alarmSettings": {
+            "highLimit": 100.0,
+            "enableAlarm": true
+          },
+          "scanRate": 1000
+        },
+        {
+          "id": "voltage1",
+          "name": "A相电压",
+          "address": "45058",
+          "dataType": "float32",
+          "unit": "V",
+          "readOnly": true,
+          "description": "A相电压值",
+          "alarmSettings": {
+            "highLimit": 250.0,
+            "lowLimit": 210.0,
+            "enableAlarm": true
+          },
+          "scanRate": 1000
+        },
+        {
+          "id": "switch1Status",
+          "name": "断路器1状态",
+          "address": "20001",
+          "dataType": "bool",
+          "readOnly": true,
+          "description": "断路器1当前状态",
+          "scanRate": 500
+        },
+        {
+          "id": "switch1Control",
+          "name": "断路器1控制",
+          "address": "50001",
+          "dataType": "bool",
+          "readOnly": false,
+          "description": "断路器1控制命令",
+          "scanRate": 500
+        }
+      ]
+    },
+    {
+      "modelId": "NR-Electric-PCS-9000",
+      "protocol": "iec61850",
+      "description": "南瑞PCS-9000系列智能变电站设备",
+      "points": [
+        {
+          "id": "activePower",
+          "name": "有功功率",
+          "address": "MMXU1.TotW.mag.f",
+          "dataType": "float32",
+          "unit": "MW",
+          "readOnly": true,
+          "description": "总有功功率",
+          "scanRate": 1000
+        },
+        {
+          "id": "reactivePower",
+          "name": "无功功率",
+          "address": "MMXU1.TotVAr.mag.f",
+          "dataType": "float32",
+          "unit": "MVar",
+          "readOnly": true,
+          "description": "总无功功率",
+          "scanRate": 1000
+        },
+        {
+          "id": "frequency",
+          "name": "系统频率",
+          "address": "MMXU1.Hz.mag.f",
+          "dataType": "float32",
+          "unit": "Hz",
+          "readOnly": true,
+          "description": "系统频率",
+          "alarmSettings": {
+            "highLimit": 50.5,
+            "lowLimit": 49.5,
+            "enableAlarm": true
+          },
+          "scanRate": 1000
+        },
+        {
+          "id": "breakerPosition",
+          "name": "断路器位置",
+          "address": "XCBR1.Pos.stVal",
+          "dataType": "enum",
+          "readOnly": true,
+          "description": "断路器位置状态",
+          "enumValues": {
+            "0": "中间状态",
+            "1": "断开",
+            "2": "闭合",
+            "3": "故障"
+          },
+          "scanRate": 500
+        }
+      ]
+    },
+    {
+      "modelId": "Vector-CANcase",
+      "protocol": "can",
+      "description": "Vector CANcase CAN总线分析仪",
+      "points": [
+        {
+          "id": "engineSpeed",
+          "name": "发动机转速",
+          "address": "0x100",
+          "startBit": 0,
+          "bitLength": 16,
+          "dataType": "uint16",
+          "unit": "RPM",
+          "scaleFactor": 1.0,
+          "readOnly": true,
+          "description": "发动机当前转速",
+          "scanRate": 100
+        },
+        {
+          "id": "vehicleSpeed",
+          "name": "车速",
+          "address": "0x100",
+          "startBit": 16,
+          "bitLength": 16,
+          "dataType": "uint16",
+          "unit": "km/h",
+          "scaleFactor": 0.1,
+          "readOnly": true,
+          "description": "当前车速",
+          "scanRate": 100
+        },
+        {
+          "id": "coolantTemp",
+          "name": "冷却液温度",
+          "address": "0x200",
+          "startBit": 0,
+          "bitLength": 8,
+          "dataType": "int8",
+          "unit": "°C",
+          "offset": -40,
+          "readOnly": true,
+          "description": "发动机冷却液温度",
+          "alarmSettings": {
+            "highLimit": 95,
+            "enableAlarm": true
+          },
+          "scanRate": 500
+        },
+        {
+          "id": "acceleratorPedal",
+          "name": "加速踏板位置",
+          "address": "0x200",
+          "startBit": 8,
+          "bitLength": 8,
+          "dataType": "uint8",
+          "unit": "%",
+          "scaleFactor": 0.4,
+          "readOnly": true,
+          "description": "加速踏板位置百分比",
+          "scanRate": 50
+        }
+      ]
+    }
+  ]
+}
