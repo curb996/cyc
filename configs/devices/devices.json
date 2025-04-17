@@ -5,7 +5,7 @@
       "name": "变电站1号设备",
       "protocol": "modbus",
       "model": "SIEMENS-S7-1200",
-      "connection": {
+      "params": {
         "address": "127.0.0.1",
         "port": 502,
         "timeout": 5000,
