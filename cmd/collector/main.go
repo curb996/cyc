@@ -67,6 +67,10 @@ func main() {
 			logger.Infof("Received data from device %s at %v with %d points",
 				data.DeviceID, data.Timestamp, len(data.Points))
 
+			for k, v := range data.Points {
+				logger.Infof("Point ID: %s, Value: %v", k, v)
+			}
+
 			// 这里可以添加数据处理、存储等逻辑
 			// 例如写入数据库、转发到消息队列等
 		}

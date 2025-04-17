@@ -6,10 +6,11 @@
       "protocol": "modbus",
       "model": "SIEMENS-S7-1200",
       "params": {
-        "address": "127.0.0.1",
+        "host": "127.0.0.1",
         "port": 502,
         "timeout": 5000,
-        "retries": 3
+        "retries": 3,
+        "slaveId": 1
       },
       "parameters": {
         "slave_id": 1,

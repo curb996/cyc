@@ -4,7 +4,6 @@ import (
 	"context"
 	"cyc/internal/config"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/grid-x/modbus"
@@ -44,24 +43,25 @@ func (d *ModbusDevice) Connect(ctx context.Context) error {
 	}
 
 	// 获取连接参数
-	host := d.info.Params["host"]
-	portStr := d.info.Params["port"]
-	port, err := strconv.Atoi(portStr)
-	if err != nil {
-		return fmt.Errorf("invalid port number: %w", err)
-	}
+	host := d.info.Params["host"].(string)
+	port := d.info.Params["port"].(float64)
+	//port, err := strconv.Atoi(portStr)
+	//if err != nil {
+	//	return fmt.Errorf("invalid port number: %w", err)
+	//}
 
 	// 创建连接
-	handler := modbus.NewTCPClientHandler(fmt.Sprintf("%s:%d", host, port))
+	handler := modbus.NewTCPClientHandler(fmt.Sprintf("%s:%d", host, int(port)))
 	handler.Timeout = 10 * time.Second
 
 	// 设置从站地址（如果有）
-	if slaveID, ok := d.info.Params["slaveId"]; ok {
-		id, err := strconv.Atoi(slaveID)
-		if err == nil {
-			handler.SetSlave(byte(id))
-			//handler.SlaveId = byte(id)
-		}
+	if slaveID, ok := d.info.Params["slaveId"].(float64); ok {
+		//id, err := strconv.Atoi(slaveID)
+		//if err == nil {
+		handler.SetSlave(byte(slaveID))
+		fmt.Println("slaveId:", slaveID)
+		//handler.SlaveId = byte(id)
+		//}
 	}
 
 	// 连接服务器
@@ -107,17 +107,20 @@ func (d *ModbusDevice) Read(ctx context.Context, point config.Point) (interface{
 	}
 
 	// 解析地址
-	address, err := strconv.ParseUint(point.Address, 0, 16)
-	if err != nil {
-		return nil, fmt.Errorf("invalid address: %w", err)
-	}
-
+	address := point.Address
+	//address, err := strconv.ParseUint(point.Address, 0, 16)
+	//if err != nil {
+	//	return nil, fmt.Errorf("invalid address: %w", err)
+	//} else {
+	//	//fmt.Println("address:", address, " num:", point.RegNum)
+	//}
+	fmt.Println("address:", address, " num:", point.RegNum, " regType:", point.RegType)
 	// 根据数据类型选择读取方法
 	var result interface{}
 
-	switch point.DataType {
+	switch point.RegType {
 	case "coil":
-		response, err := d.client.ReadCoils(uint16(address), 1)
+		response, err := d.client.ReadCoils(address, 1)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read coil: %w", err)
 		}
@@ -175,10 +178,12 @@ func (d *ModbusDevice) Write(ctx context.Context, point config.Point, value inte
 	}
 
 	// 解析地址
-	address, err := strconv.ParseUint(point.Address, 0, 16)
-	if err != nil {
-		return fmt.Errorf("invalid address: %w", err)
-	}
+	address := point.Address
+	var err error
+	//address, err := strconv.ParseUint(point.Address, 0, 16)
+	//if err != nil {
+	//	return fmt.Errorf("invalid address: %w", err)
+	//}
 
 	switch point.DataType {
 	case "coil":

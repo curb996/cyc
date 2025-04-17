@@ -38,10 +38,14 @@ func (f *DeviceFactory) CreateDevice(deviceID string) (Device, error) {
 			ID:          p.ID,
 			Name:        p.Name,
 			Address:     p.Address,
+			RegType:     p.RegType,
+			RegNum:      p.RegNum,
 			DataType:    p.DataType,
 			Scale:       p.Scale,
 			Unit:        p.Unit,
 			Description: p.Description,
+			ReadOnly:    p.ReadOnly,
+			RegSwap:     p.RegSwap,
 		})
 	}
 
