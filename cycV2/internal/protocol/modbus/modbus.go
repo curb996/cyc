@@ -144,7 +144,7 @@ func (m *ModbusAdapter) Read(_ string, params map[string]interface{}) ([]byte, e
 }
 
 // Write 用于 Modbus 点写入
-// params: slave_id, func (hr/co), address, quantity
+// params:  func (hr/co), address, quantity
 func (m *ModbusAdapter) Write(_ string, data []byte, params map[string]interface{}) error {
 	if !m.opened {
 		if err := m.Connect(); err != nil {
@@ -195,12 +195,12 @@ func (m *ModbusAdapter) Write(_ string, data []byte, params map[string]interface
 }
 
 // 内部工具函数：设置从站号
-func (m *ModbusAdapter) setSlaveId(unitId uint8) {
+func (m *ModbusAdapter) setSlaveId(salveId uint8) {
 	switch h := m.handler.(type) {
 	case *modbus.TCPClientHandler:
-		h.SetSlave(unitId)
+		h.SetSlave(salveId)
 	case *modbus.RTUClientHandler:
-		h.SetSlave(unitId)
+		h.SetSlave(salveId)
 	}
 }
 
