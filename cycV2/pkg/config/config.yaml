@@ -1,0 +1,15 @@
+devices:
+  - name: "BMS1"
+    type: "BMS"
+    protocol: "modbus"
+    addr: "192.168.0.10:502"
+    params:
+      slave_id: 1
+      read_regs: [40001, 40002]
+  - name: "PCS1"
+    type: "PCS"
+    protocol: "can"
+    addr: "/dev/can0"
+    params:
+      frame_id: 0x123
+      baudrate: 500000

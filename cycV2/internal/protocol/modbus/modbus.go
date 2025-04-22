@@ -1,0 +1,269 @@
+package modbus
+
+import (
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"time"
+	"unsafe"
+
+	"cycV2/internal/protocol"
+	"github.com/grid-x/modbus"
+)
+
+// 协议注册
+func init() {
+	protocol.Register("modbus", NewModbusAdapter)
+}
+
+// ModbusAdapter 实现 protocol.ProtocolAdapter 接口
+type ModbusAdapter struct {
+	handler modbus.ClientHandler
+	client  modbus.Client
+	config  map[string]interface{}
+	opened  bool
+}
+
+// NewModbusAdapter 工厂函数，根据配置创建 Modbus Adapter（支持 TCP/RTU）
+func NewModbusAdapter(cfg map[string]interface{}) (protocol.ProtocolAdapter, error) {
+	mode, _ := cfg["mode"].(string) // "tcp" / "rtu"
+	addr, _ := cfg["addr"].(string)
+	//slave, flag := cfg["slaveId"].(uint8)
+	slave := parseUint8(cfg["slaveId"], 1)
+	//if !flag {
+	//	fmt.Println("err:", flag)
+	//}
+	timeout := time.Second * 2
+	if to, ok := cfg["timeout_ms"].(int); ok && to > 0 {
+		timeout = time.Duration(to) * time.Millisecond
+	}
+	fmt.Println("slaveid:", slave)
+
+	switch mode {
+	case "tcp":
+		handler := modbus.NewTCPClientHandler(addr)
+		handler.Timeout = timeout
+		//handler.SetSlave(slave)
+		handler.SlaveID = slave
+		return &ModbusAdapter{
+			handler: handler,
+			config:  cfg,
+			opened:  false,
+		}, nil
+	case "rtu":
+		baud := 9600
+		if v, ok := cfg["baudrate"].(int); ok && v > 0 {
+			baud = v
+		}
+		dataBits := 8
+		if v, ok := cfg["databits"].(int); ok && v > 0 {
+			dataBits = v
+		}
+		stopBits := 1
+		if v, ok := cfg["stopbits"].(int); ok && v > 0 {
+			stopBits = v
+		}
+		parity := "N"
+		if v, ok := cfg["parity"].(string); ok && v != "" {
+			parity = v
+		}
+		handler := modbus.NewRTUClientHandler(addr)
+		handler.BaudRate = baud
+		handler.DataBits = dataBits
+		handler.Parity = parity
+		handler.StopBits = stopBits
+		handler.Timeout = timeout
+		//handler.SetSlave(slave)
+		handler.SlaveID = slave
+		return &ModbusAdapter{
+			handler: handler,
+			config:  cfg,
+			opened:  false,
+		}, nil
+	default:
+		return nil, errors.New("unsupported modbus mode, should be tcp or rtu")
+	}
+}
+
+// Connect 实现协议连接
+func (m *ModbusAdapter) Connect() error {
+	if m.opened {
+		return nil
+	}
+	err := m.handler.Connect()
+	if err == nil {
+		m.client = modbus.NewClient(m.handler)
+		m.opened = true
+	}
+	return err
+}
+
+// Disconnect 用于断开连接
+func (m *ModbusAdapter) Disconnect() error {
+	if !m.opened {
+		return nil
+	}
+	if err := m.handler.Close(); err != nil {
+		return err
+	}
+	m.opened = false
+	return nil
+}
+
+// Read 用于 Modbus 点读取
+// params: slave_id, func (hr,ir,co,di), address, quantity
+func (m *ModbusAdapter) Read(_ string, params map[string]interface{}) ([]byte, error) {
+	if !m.opened {
+		if err := m.Connect(); err != nil {
+			return nil, fmt.Errorf("connect failed: %w", err)
+		}
+	}
+	// 单元号 - 支持 int/float64/uint8（兼容 json 解码）
+	//unit := parseUint8(params["slave_id"], 1)
+	//m.setSlaveId(unit)
+	// 功能码
+	funcStr, _ := params["func"].(string)
+	if funcStr == "" {
+		funcStr = "hr"
+	}
+	address := parseUint16(params["address"], 0)
+	quantity := parseUint16(params["quantity"], 1)
+
+	switch funcStr {
+	case "hr":
+		return m.client.ReadHoldingRegisters(address, quantity)
+	case "ir":
+		return m.client.ReadInputRegisters(address, quantity)
+	case "co":
+		return m.client.ReadCoils(address, quantity)
+	case "di":
+		return m.client.ReadDiscreteInputs(address, quantity)
+	default:
+		return nil, fmt.Errorf("unknown func type: %s", funcStr)
+	}
+}
+
+// Write 用于 Modbus 点写入
+// params: slave_id, func (hr/co), address, quantity
+func (m *ModbusAdapter) Write(_ string, data []byte, params map[string]interface{}) error {
+	if !m.opened {
+		if err := m.Connect(); err != nil {
+			return fmt.Errorf("connect failed: %w", err)
+		}
+	}
+	//unit := parseUint8(params["slave_id"], 1)
+	//m.setSlaveId(unit)
+	funcStr, _ := params["func"].(string)
+	if funcStr == "" {
+		funcStr = "hr"
+	}
+	address := parseUint16(params["address"], 0)
+	quantity := parseUint16(params["quantity"], 1)
+	// 注意：data长度与quantity需匹配
+	switch funcStr {
+	case "hr":
+		if quantity == 1 {
+			if len(data) != 2 {
+				return errors.New("data length mismatch: should be 2 bytes for one register")
+			}
+			val := binary.BigEndian.Uint16(data) // 默认大端
+			_, err := m.client.WriteSingleRegister(address, val)
+			return err
+		}
+		if len(data) != int(quantity)*2 {
+			return fmt.Errorf("data length mismatch: %d, expect %d", len(data), quantity*2)
+		}
+		_, err := m.client.WriteMultipleRegisters(address, quantity, data)
+		return err
+	case "co":
+		if quantity == 1 {
+			if len(data) != 1 {
+				return errors.New("data length mismatch: should be 1 byte for one coil")
+			}
+			val := uint16(0x0000)
+			if data[0] != 0 {
+				val = 0xFF00
+			}
+			_, err := m.client.WriteSingleCoil(address, val)
+			return err
+		}
+		_, err := m.client.WriteMultipleCoils(address, quantity, data)
+		return err
+	default:
+		return fmt.Errorf("write not supported for func=%s", funcStr)
+	}
+}
+
+// 内部工具函数：设置从站号
+func (m *ModbusAdapter) setSlaveId(unitId uint8) {
+	switch h := m.handler.(type) {
+	case *modbus.TCPClientHandler:
+		h.SetSlave(unitId)
+	case *modbus.RTUClientHandler:
+		h.SetSlave(unitId)
+	}
+}
+
+// ------- 参数类型转换工具 --------
+// 兼容前端/配置json传int/float64
+func parseUint8(raw interface{}, def uint8) uint8 {
+	switch v := raw.(type) {
+	case uint8:
+		return v
+	case int:
+		return uint8(v)
+	case float64:
+		return uint8(v)
+	case nil:
+		return def
+	default:
+		return def
+	}
+}
+func parseUint16(raw interface{}, def uint16) uint16 {
+	switch v := raw.(type) {
+	case uint16:
+		return v
+	case int:
+		return uint16(v)
+	case float64:
+		return uint16(v)
+	case nil:
+		return def
+	default:
+		return def
+	}
+}
+
+// ---- 辅助解析高低字交换和字节序可选 ----
+
+func SwapRegisterWords(data []byte, swapReg bool) []byte {
+	copyData := make([]byte, len(data))
+	copy(copyData, data)
+	if swapReg && len(copyData) == 4 {
+		copyData[0], copyData[1], copyData[2], copyData[3] = copyData[2], copyData[3], copyData[0], copyData[1]
+	}
+	return copyData
+}
+
+func ParseFloat32(data []byte, byteOrder string, swapReg bool) float32 {
+	v := SwapRegisterWords(data, swapReg)
+	var u uint32
+	if byteOrder == "little" {
+		u = binary.LittleEndian.Uint32(v)
+	} else {
+		u = binary.BigEndian.Uint32(v)
+	}
+	return float32FromBits(u)
+}
+
+func float32FromBits(u uint32) float32 {
+	return *(*float32)(unsafe.Pointer(&u))
+}
+
+func ParseUint16(data []byte, byteOrder string) uint16 {
+	if byteOrder == "little" {
+		return binary.LittleEndian.Uint16(data)
+	}
+	return binary.BigEndian.Uint16(data)
+}

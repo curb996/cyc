@@ -1,0 +1,75 @@
+{
+  "models": [
+    {
+      "modelId": "SIEMENS-S7-1200",
+      "protocol": "modbus",
+      "description": "西门子S7-1200 PLC设备",
+      "points": [
+        {
+          "id": "temp1",
+          "name": "温度传感器1",
+          "address": 1,
+          "regType": "holding",
+          "regNum": 1,
+          "dataType": "int16",
+          "unit": "°C",
+          "scaleFactor": 0.1,
+          "readOnly": true,
+          "regSwap": false,
+          "description": "设备环境温度",
+          "alarmSettings": {
+            "highLimit": 75.0,
+            "lowLimit": -10.0,
+            "enableAlarm": true
+          },
+          "scanRate": 1000
+        },
+        {
+          "id": "humidity1",
+          "name": "湿度传感器1",
+          "address": 2,
+          "regType": "holding",
+          "regNum": 1,
+          "dataType": "int16",
+          "unit": "%RH",
+          "scaleFactor": 0.1,
+          "readOnly": true,
+          "regSwap": false,
+          "description": "设备环境湿度",
+          "alarmSettings": {
+            "highLimit": 95.0,
+            "lowLimit": 5.0,
+            "enableAlarm": true
+          },
+          "scanRate": 1000
+        },
+        {
+          "id": "powerStatus",
+          "name": "电源状态",
+          "regType": "holding",
+          "regNum": 1,
+          "address": 3,
+          "dataType": "uint16",
+          "scaleFactor": 1,
+          "readOnly": true,
+          "regSwap": false,
+          "description": "设备电源状态",
+          "scanRate": 500
+        },
+        {
+          "id": "controlSwitch",
+          "name": "控制开关",
+          "regType": "holding",
+          "regNum": 1,
+          "address": 4,
+          "dataType": "uint16",
+          "scaleFactor": 1,
+          "readOnly": true,
+          "regSwap": false,
+          "description": "设备控制开关",
+          "scanRate": 500
+        }
+      ]
+    }
+  ]
+}
