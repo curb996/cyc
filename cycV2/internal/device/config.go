@@ -16,13 +16,14 @@ type PointConfig struct {
 }
 
 type DeviceConfig struct {
+	BusId       string                 `json:"busId"` //总线id,相同的id需要进行轮询进行采集
 	Name        string                 `json:"name"`
 	IpAddr      string                 `json:"ipAddr"`
 	Protocol    string                 `json:"protocol"`
 	Params      map[string]interface{} `json:"params"` // 协议全局参数
 	Points      []PointConfig          `json:"points"`
 	SlaveId     uint8                  `json:"slaveId"`     //从站id
-	AdapterType string                 `json:"adapterType"` //适配器类型  比如:modbus、can等
+	AdapterName string                 `json:"AdapterName"` //适配器类型  比如:modbus、can等
 	IntervalMs  int                    `json:"interval_ms"` // 采集周期（毫秒）
 }
 

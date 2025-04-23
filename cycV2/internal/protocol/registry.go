@@ -11,14 +11,14 @@ var (
 	registry = sync.Map{} // map[string]AdapterFactory
 )
 
-func Register(protocol string, factory AdapterFactory) {
-	registry.Store(protocol, factory)
+func Register(adapterName string, factory AdapterFactory) {
+	registry.Store(adapterName, factory)
 }
 
-func GetAdapter(protocol string, cfg map[string]interface{}) (ProtocolAdapter, error) {
-	f, ok := registry.Load(protocol)
+func GetAdapter(adapterName string, cfg map[string]interface{}) (ProtocolAdapter, error) {
+	f, ok := registry.Load(adapterName)
 	if !ok {
-		return nil, fmt.Errorf("protocol adapter not found: %v", protocol)
+		return nil, fmt.Errorf("protocol adapter not found: %v", adapterName)
 	}
 	return f.(AdapterFactory)(cfg)
 }

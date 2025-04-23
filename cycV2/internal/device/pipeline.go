@@ -22,37 +22,92 @@ import (
 //}
 
 // StartCollectPipeline 启动采集流水线：每台设备定时采集，将原始点映射送入out通道，不阻塞
-func StartCollectPipeline(devices []*ModbusDevice, out chan<- RawCollectResult, stopCh <-chan struct{}) {
-	for _, dev := range devices {
-		d := dev // goroutine闭包变量捕获
-		go func() {
-			interval := time.Duration(d.Cfg.IntervalMs) * time.Millisecond
-			if interval <= 0 {
-				interval = 1000 * time.Millisecond // 默认1s
-			}
-			ticker := time.NewTicker(interval)
+//func StartCollectPipeline(devices []*ModbusDevice, out chan<- RawCollectResult, stopCh <-chan struct{}) {
+//	for _, dev := range devices {
+//		d := dev // goroutine闭包变量捕获
+//		go func() {
+//			interval := time.Duration(d.Cfg.IntervalMs) * time.Millisecond
+//			if interval <= 0 {
+//				interval = 1000 * time.Millisecond // 默认1s
+//			}
+//			ticker := time.NewTicker(interval)
+//
+//			defer ticker.Stop()
+//			for {
+//				select {
+//				case <-ticker.C:
+//					raw, err := d.Collect() // map[string]interface{}
+//					if err != nil {
+//						log.Printf("[采集流水线] 设备 %s 采集错误: %v", d.Cfg.Name, err)
+//						continue
+//					}
+//					out <- RawCollectResult{
+//						DeviceName: d.Cfg.Name,
+//						RawPoints:  raw,
+//						Timestamp:  time.Now(),
+//					}
+//				case <-stopCh:
+//					log.Printf("停止采集设备 %s, pipeline退出", d.Cfg.Name)
+//					return
+//				}
+//			}
+//		}()
+//	}
+//}
 
-			defer ticker.Stop()
-			for {
-				select {
-				case <-ticker.C:
-					raw, err := d.Collect() // map[string]interface{}
-					if err != nil {
-						log.Printf("[采集流水线] 设备 %s 采集错误: %v", d.Cfg.Name, err)
-						continue
-					}
-					out <- RawCollectResult{
-						DeviceName: d.Cfg.Name,
-						RawPoints:  raw,
-						Timestamp:  time.Now(),
-					}
-				case <-stopCh:
-					log.Printf("停止采集设备 %s, pipeline退出", d.Cfg.Name)
-					return
-				}
-			}
-		}()
+// StartCollectPipeline 启动总线采集流水线：同一总线下仅一组worker顺序采集所有设备，避免串口冲突。
+// 支持每设备配置独立采集间隔。
+func StartCollectPipeline(devices []*ModbusDevice, out chan<- RawCollectResult, stopCh <-chan struct{}) {
+	if len(devices) == 0 {
+		return
 	}
+	go func() {
+		// 每轮都遍历一遍devices，但按各自采集间隔（IntervalMs）决定是否采集
+		lastCollect := make(map[string]time.Time)
+		for _, dev := range devices {
+			lastCollect[dev.Cfg.Name] = time.Time{}
+		}
+		ticker := time.NewTicker(100 * time.Millisecond) // 最高100ms一轮总线轮询
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				now := time.Now()
+				for _, d := range devices {
+					interval := time.Duration(d.Cfg.IntervalMs) * time.Millisecond
+					if interval <= 0 {
+						interval = 1000 * time.Millisecond
+					}
+					// 距离上次采集是否到达间隔
+					if now.Sub(lastCollect[d.Cfg.Name]) >= interval {
+						raw, err := d.Collect()
+						if err != nil {
+							log.Printf("[采集流水线] 设备%s采集错误: %v", d.Cfg.Name, err)
+							continue
+						}
+						out <- RawCollectResult{
+							DeviceName: d.Cfg.Name,
+							RawPoints:  raw,
+							Timestamp:  now,
+						}
+						lastCollect[d.Cfg.Name] = now
+					}
+				}
+			case <-stopCh:
+				log.Printf("总线 worker 轮询退出, 设备: %v", deviceNames(devices))
+				return
+			}
+		}
+	}()
+}
+
+// 输出设备名列表辅助日志
+func deviceNames(devs []*ModbusDevice) []string {
+	names := make([]string, 0, len(devs))
+	for _, d := range devs {
+		names = append(names, d.Cfg.Name)
+	}
+	return names
 }
 
 // StartParseWorkerPool 启动多个解析worker，每个worker从in通道读出
