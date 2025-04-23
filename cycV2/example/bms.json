@@ -1,0 +1,25 @@
+{
+  "name": "bms-101",
+  "protocol": "modbus",
+  "params": {
+    "slave_id": 1
+  },
+  "points": [
+    {
+      "id": "volt",
+      "desc": "电池电压",
+      "params": {"func": "hr", "address": 0, "quantity": 2},
+      "parse": "float32",
+      "swap_reg": false,
+      "byte_order": "big"
+    },
+    {
+      "id": "current",
+      "desc": "电池电流",
+      "params": {"func": "hr", "address": 2, "quantity": 2},
+      "parse": "float32",
+      "swap_reg": true,
+      "byte_order": "big"
+    }
+  ]
+}

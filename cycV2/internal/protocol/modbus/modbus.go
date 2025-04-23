@@ -27,17 +27,14 @@ type ModbusAdapter struct {
 // NewModbusAdapter 工厂函数，根据配置创建 Modbus Adapter（支持 TCP/RTU）
 func NewModbusAdapter(cfg map[string]interface{}) (protocol.ProtocolAdapter, error) {
 	mode, _ := cfg["mode"].(string) // "tcp" / "rtu"
-	addr, _ := cfg["addr"].(string)
-	//slave, flag := cfg["slaveId"].(uint8)
+	addr, _ := cfg["address"].(string)
 	slave := parseUint8(cfg["slaveId"], 1)
-	//if !flag {
-	//	fmt.Println("err:", flag)
-	//}
+
 	timeout := time.Second * 2
-	if to, ok := cfg["timeout_ms"].(int); ok && to > 0 {
+	if to, ok := cfg["timeoutMs"].(int); ok && to > 0 {
 		timeout = time.Duration(to) * time.Millisecond
 	}
-	fmt.Println("slaveid:", slave)
+	fmt.Println("slaveId:", slave)
 
 	switch mode {
 	case "tcp":
@@ -112,7 +109,7 @@ func (m *ModbusAdapter) Disconnect() error {
 
 // Read 用于 Modbus 点读取
 // params: slave_id, func (hr,ir,co,di), address, quantity
-func (m *ModbusAdapter) Read(_ string, params map[string]interface{}) ([]byte, error) {
+func (m *ModbusAdapter) Read(params map[string]interface{}) ([]byte, error) {
 	if !m.opened {
 		if err := m.Connect(); err != nil {
 			return nil, fmt.Errorf("connect failed: %w", err)
@@ -129,6 +126,8 @@ func (m *ModbusAdapter) Read(_ string, params map[string]interface{}) ([]byte, e
 	address := parseUint16(params["address"], 0)
 	quantity := parseUint16(params["quantity"], 1)
 
+	fmt.Println("funcStr:", funcStr, " address:", address, " quantity:", quantity)
+
 	switch funcStr {
 	case "hr":
 		return m.client.ReadHoldingRegisters(address, quantity)
@@ -140,6 +139,23 @@ func (m *ModbusAdapter) Read(_ string, params map[string]interface{}) ([]byte, e
 		return m.client.ReadDiscreteInputs(address, quantity)
 	default:
 		return nil, fmt.Errorf("unknown func type: %s", funcStr)
+	}
+}
+
+func (m *ModbusAdapter) BatchRead(funcCode string, startAddr, quantity uint16) ([]byte, error) {
+	// 如果你管理了多个unitId，需 SetSlave
+	// 下面以最常用功能码举例
+	switch funcCode {
+	case "hr", "03": // holding registers
+		return m.client.ReadHoldingRegisters(startAddr, quantity)
+	case "ir", "04": // input registers
+		return m.client.ReadInputRegisters(startAddr, quantity)
+	case "co", "01": // coils
+		return m.client.ReadCoils(startAddr, quantity)
+	case "di", "02": // discrete inputs
+		return m.client.ReadDiscreteInputs(startAddr, quantity)
+	default:
+		return nil, fmt.Errorf("not support funcCode: %s", funcCode)
 	}
 }
 
@@ -191,6 +207,40 @@ func (m *ModbusAdapter) Write(_ string, data []byte, params map[string]interface
 		return err
 	default:
 		return fmt.Errorf("write not supported for func=%s", funcStr)
+	}
+}
+
+func (m *ModbusAdapter) WriteModbus(funcCode string, addr uint16, data []byte) error {
+	if !m.opened {
+		if err := m.Connect(); err != nil {
+			return fmt.Errorf("connect failed: %w", err)
+		}
+	}
+	switch funcCode {
+	case "co", "01": // single or multiple coil
+		if len(data) == 2 {
+			// 单线圈，data需能转uint16
+			value := binary.BigEndian.Uint16(data)
+			_, err := m.client.WriteSingleCoil(addr, value)
+			return err
+		} else {
+			// 多线圈，Modbus要求bit packed
+			quantity := uint16(len(data) * 8)
+			_, err := m.client.WriteMultipleCoils(addr, quantity, data)
+			return err
+		}
+	case "hr", "03": // single or multiple holding register
+		if len(data) == 2 {
+			value := binary.BigEndian.Uint16(data)
+			_, err := m.client.WriteSingleRegister(addr, value)
+			return err
+		} else {
+			quantity := uint16(len(data) / 2)
+			_, err := m.client.WriteMultipleRegisters(addr, quantity, data)
+			return err
+		}
+	default:
+		return fmt.Errorf("unsupported funcCode: %s", funcCode)
 	}
 }
 
