@@ -10,10 +10,12 @@ func TestStartParseWorkerPool(t *testing.T) {
 
 	// 1. 配置两个设备（不同slaveId即可区分）
 	dev1Cfg := DeviceConfig{
-		Name:        "bms1",
+		BusId:       "1",
+		Name:        "device1",
 		SlaveId:     1,
 		IpAddr:      "127.0.0.1:502",
-		AdapterType: "modbus",
+		AdapterName: "modbus",
+		IntervalMs:  1000,
 		Points: []PointConfig{
 			{
 				Name:      "Volatage",
@@ -33,10 +35,12 @@ func TestStartParseWorkerPool(t *testing.T) {
 		},
 	}
 	dev2Cfg := DeviceConfig{
-		Name:        "bms2",
+		BusId:       "1",
+		Name:        "device2",
 		SlaveId:     2,
 		IpAddr:      "127.0.0.1:502",
-		AdapterType: "modbus",
+		AdapterName: "modbus",
+		IntervalMs:  5000,
 		Points: []PointConfig{
 			{
 				Name:      "Current",
@@ -86,11 +90,14 @@ func TestStartParseWorkerPool(t *testing.T) {
 		Adapter: adapter2,
 	}
 
-	devices := []*ModbusDevice{d1, d2}
+	devices1 := []*ModbusDevice{d1}
+	devices2 := []*ModbusDevice{d2}
+
 	rawCh := make(chan RawCollectResult, 100)
 	stopCh := make(chan struct{})
 
-	StartCollectPipeline(devices, rawCh, stopCh)
+	StartCollectPipeline(devices1, rawCh, stopCh)
+	StartCollectPipeline(devices2, rawCh, stopCh)
 
 	//wg := StartParseWorkerPool(rawCh, 4, func(dev string, parsed map[string]interface{}) {
 	//	// 你的上传、落库、转发等

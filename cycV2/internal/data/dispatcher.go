@@ -22,8 +22,8 @@ func Register(name string, d DataDispatcher) {
 	dispatchers[name] = d
 }
 
-// Get 默认获得指定类型，如未注册返回nil
-func Get(name string) DataDispatcher {
+// GetDispatcherByName 默认获得指定类型，如未注册返回nil
+func GetDispatcherByName(name string) DataDispatcher {
 	dispatcherMu.RLock()
 	defer dispatcherMu.RUnlock()
 	return dispatchers[name]
@@ -34,7 +34,7 @@ func SetDefaultType(name string) {
 	defaultType = name
 }
 
-// GetDefault 获取默认实现，如未注册返回nil
-func GetDefault() DataDispatcher {
-	return Get(defaultType)
+// GetDefaultDispatcher 获取默认实现，如未注册返回nil
+func GetDefaultDispatcher() DataDispatcher {
+	return GetDispatcherByName(defaultType)
 }

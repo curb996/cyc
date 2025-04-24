@@ -2,6 +2,7 @@ package device
 
 import (
 	"cycV2/internal/data"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -64,22 +65,39 @@ func StartCollectPipeline(devices []*ModbusDevice, out chan<- RawCollectResult, 
 	go func() {
 		// 每轮都遍历一遍devices，但按各自采集间隔（IntervalMs）决定是否采集
 		lastCollect := make(map[string]time.Time)
+		minInterval := 0
 		for _, dev := range devices {
+			fmt.Println("name:", dev.Cfg.Name, " intervalMs:", dev.Cfg.IntervalMs)
 			lastCollect[dev.Cfg.Name] = time.Time{}
+			//按照设备组中采集频率最快的能适应的采集频率进行采集
+			if dev.Cfg.IntervalMs != 0 {
+				if minInterval == 0 || minInterval > dev.Cfg.IntervalMs {
+					minInterval = dev.Cfg.IntervalMs
+				}
+			}
 		}
-		ticker := time.NewTicker(100 * time.Millisecond) // 最高100ms一轮总线轮询
+		if minInterval <= 0 {
+			minInterval = 1000 // 默认1s
+		}
+		fmt.Println("###minInterval:", minInterval)
+		interval := time.Duration(minInterval) * time.Millisecond
+		ticker := time.NewTicker(interval)
+
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
 				now := time.Now()
 				for _, d := range devices {
-					interval := time.Duration(d.Cfg.IntervalMs) * time.Millisecond
-					if interval <= 0 {
-						interval = 1000 * time.Millisecond
+
+					temp := d.Cfg.IntervalMs
+					if temp <= 0 {
+						temp = 1000 //默认1s
 					}
+					t := time.Duration(temp) * time.Millisecond
+
 					// 距离上次采集是否到达间隔
-					if now.Sub(lastCollect[d.Cfg.Name]) >= interval {
+					if now.Sub(lastCollect[d.Cfg.Name]) >= t { //防止同一组中有些设备需要慢点采集的需求
 						raw, err := d.Collect()
 						if err != nil {
 							log.Printf("[采集流水线] 设备%s采集错误: %v", d.Cfg.Name, err)
@@ -148,15 +166,18 @@ func StartParseWorkerPool(
 
 // 打印式 parsedHandler 示例
 func parsedHandler(deviceName string, parsedPoints map[string]interface{}) {
-	// 结构化打印
-	//b, _ := json.MarshalIndent(parsedPoints, "", "  ")
-	//log.Printf("[设备:%s] 解析后点表数据:\n%s\n", deviceName, b)
-	//TODO 写入缓存、数据库/推送消息队列
-	//for point, val := range parsedPoints {
-	//	fmt.Printf("%s,%s,%v\n", deviceName, point, val)
+	//TODO 后面可以写入缓存、数据库/推送消息队列
+
+	//TODO 测试http分发
+	//dispathcher := data.GetDispatcherByName("http").(*data.HTTPDispatcher)
+	//dispathcher.URL = "127.0.0.1"
+	//err := dispathcher.Dispatch(deviceName, parsedPoints)
+	//if err != nil {
+	//	log.Printf("数据分发错误: %v", err)
 	//}
 
-	err := data.GetDefault().Dispatch(deviceName, parsedPoints)
+	//TODO 测试默认日志打印
+	err := data.GetDefaultDispatcher().Dispatch(deviceName, parsedPoints)
 	if err != nil {
 		log.Printf("数据分发错误: %v", err)
 	}

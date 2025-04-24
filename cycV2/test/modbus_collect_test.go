@@ -14,7 +14,7 @@ func TestConcurrentCollectMultipleModbusDevices(t *testing.T) {
 		Name:        "bms1",
 		SlaveId:     1,
 		IpAddr:      "127.0.0.1:502",
-		AdapterType: "modbus",
+		AdapterName: "modbus",
 		Points: []device.PointConfig{
 			{
 				Name:      "voltage",
@@ -30,7 +30,7 @@ func TestConcurrentCollectMultipleModbusDevices(t *testing.T) {
 		Name:        "bms2",
 		SlaveId:     2,
 		IpAddr:      "127.0.0.1:502",
-		AdapterType: "modbus",
+		AdapterName: "modbus",
 		Points: []device.PointConfig{
 			{
 				Name:      "voltage",

@@ -126,7 +126,7 @@ func (m *ModbusAdapter) Read(params map[string]interface{}) ([]byte, error) {
 	address := parseUint16(params["address"], 0)
 	quantity := parseUint16(params["quantity"], 1)
 
-	fmt.Println("funcStr:", funcStr, " address:", address, " quantity:", quantity)
+	//fmt.Println("funcStr:", funcStr, " address:", address, " quantity:", quantity)
 
 	switch funcStr {
 	case "hr":

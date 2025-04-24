@@ -22,7 +22,13 @@ func (dm *DeviceManager) Register(cfg DeviceConfig, adapter protocol.ProtocolAda
 	if _, ok := dm.devices[cfg.Name]; ok {
 		return fmt.Errorf("device already exists: %s", cfg.Name)
 	}
-	dm.devices[cfg.Name] = NewModbusDevice(cfg, adapter)
+	switch cfg.AdapterName {
+	case "modbus":
+		dm.devices[cfg.Name] = NewModbusDevice(cfg, adapter)
+	default:
+		fmt.Println("Register Failed....  AdapterName:", cfg.AdapterName)
+	}
+
 	return nil
 }
 
