@@ -5,6 +5,7 @@ go 1.22.9
 require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/grid-x/modbus v0.0.0-20250403195434-0b5f88db24d0
+	github.com/mitchellh/mapstructure v1.5.0
 )
 
 require (

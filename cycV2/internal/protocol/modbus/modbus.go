@@ -2,6 +2,7 @@ package modbus
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -9,6 +10,8 @@ import (
 
 	"cycV2/internal/protocol"
 	"github.com/grid-x/modbus"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 // 协议注册
@@ -16,12 +19,28 @@ func init() {
 	protocol.Register("modbus", NewModbusAdapter)
 }
 
+// ModbusConfig 兼容TCP和RTU，未用参数可省略配置
+type ModbusConfig struct {
+	//公用
+	Mode      string `json:"mode"`      // "tcp" | "rtu"
+	SlaveID   byte   `json:"slaveId"`   // 站号
+	TimeoutMS int    `json:"timeoutMs"` // 超时时间，毫秒
+	//TCP
+	Address string `json:"address,omitempty"` // "127.0.0.1:502"  TCP模式用
+	//RTU
+	SerialPort string `json:"serialPort,omitempty"` //串口设备,仅RTU模式用
+	BaudRate   int    `json:"baudRate,omitempty"`   //波特率
+	DataBits   int    `json:"dataBits,omitempty"`   //数据位
+	Parity     string `json:"parity,omitempty"`     // "N", "E", "O"
+	StopBits   int    `json:"stopBits,omitempty"`   //停止位
+}
+
 // ModbusAdapter 实现 protocol.ProtocolAdapter 接口
 type ModbusAdapter struct {
 	handler modbus.ClientHandler
 	client  modbus.Client
-	config  map[string]interface{}
-	opened  bool
+	config  map[string]interface{} //TODO,可以更改成具体modbus配置信息
+	opened  bool                   //判断是否打开连接了
 }
 
 // NewModbusAdapter 工厂函数，根据配置创建 Modbus Adapter（支持 TCP/RTU）
@@ -316,4 +335,36 @@ func ParseUint16(data []byte, byteOrder string) uint16 {
 		return binary.LittleEndian.Uint16(data)
 	}
 	return binary.BigEndian.Uint16(data)
+}
+
+// MapToModbusConfig 将map转换为ModbusConfig结构体
+func MapToModbusConfig(m map[string]interface{}) (*ModbusConfig, error) {
+	var cfg ModbusConfig
+	decoderConfig := &mapstructure.DecoderConfig{
+		Metadata:         nil,
+		Result:           &cfg,
+		TagName:          "json", // 支持小驼峰的json标签
+		WeaklyTypedInput: true,   // 支持字符串数值自动转类型
+	}
+	decoder, err := mapstructure.NewDecoder(decoderConfig)
+	if err != nil {
+		return nil, err
+	}
+	if err := decoder.Decode(m); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+// ModbusConfigToMap 将ModbusConfig结构体转为map[string]interface{}
+func ModbusConfigToMap(cfg *ModbusConfig) (map[string]interface{}, error) {
+	byts, err := json.Marshal(cfg)
+	if err != nil {
+		return nil, err
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(byts, &m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
