@@ -174,7 +174,7 @@ func (b *ModbusBus) doBatchCollect() {
 			// 按分组内偏移映射到各点
 			for _, pt := range group.Points {
 				val := parseValueFromBatch(readMap, pt)
-				fmt.Printf("Device %s point %s = %v\n", dev.Cfg.Name, pt.Id, val)
+				fmt.Printf("Device %s point %s = %v\n", dev.Cfg.Name, pt.Name, val)
 			}
 		}
 	}

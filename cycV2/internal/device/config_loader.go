@@ -253,7 +253,7 @@ func loadDevicesByBus(configPath string) (map[string][]*ModbusDevice, error) {
 			fmt.Println("protocol.GetAdapter Failed...name:", cfg.AdapterName, " err:", err)
 			continue
 		}
-		md := NewModbusDevice(*cfg, adapter) // 你的工厂函数
+		md := NewModbusDevice(*cfg, adapter)
 		busGroup[busID] = append(busGroup[busID], md)
 	}
 	return busGroup, nil
